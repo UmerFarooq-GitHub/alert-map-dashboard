@@ -5,7 +5,6 @@ import { AlertRecord } from "@/types/alert";
 import ExcelUploader from "@/components/alert-map/ExcelUploader";
 import KpiCards from "@/components/alert-map/KpiCards";
 import AlertMap from "@/components/alert-map/AlertMap";
-import AlertGrid from "@/components/alert-map/AlertGrid";
 import Image from "next/image";
 
 export default function Home() {
@@ -30,7 +29,7 @@ console.log("ALERTS STATE:", alerts.length);
 
       <div>
         <h1 className="text-2xl font-bold text-white">
-          Alert Map
+          Karachi Alert Map
         </h1>
 
         <p className="text-sm text-slate-400">
@@ -47,16 +46,11 @@ console.log("ALERTS STATE:", alerts.length);
       <ExcelUploader onDataLoaded={setAlerts} />
       <KpiCards alerts={alerts} />
 
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 mt-4">
-        <section className="xl:col-span-2 h-[680px] rounded-2xl border border-gray-800 bg-[#111827] overflow-hidden">
-          <AlertMap alerts={alerts} />
-        </section>
-
-        <section className="h-[680px] rounded-2xl border border-gray-800 bg-[#111827] overflow-hidden">
-          <AlertGrid alerts={alerts} />
-        </section>
-        
-      </div>
+      <div className="mt-4">
+  <section className="h-[760px] rounded-2xl border border-gray-800 bg-[#111827] overflow-hidden">
+    <AlertMap alerts={alerts} />
+  </section>
+</div>
     </main>
   );
 }

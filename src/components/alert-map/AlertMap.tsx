@@ -32,11 +32,21 @@ export default function AlertMap({ alerts }: Props) {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<Map | null>(null);
   const popupRef = useRef<Popup | null>(null);
+function isKarachiRegion(alert: AlertRecord) {
+  const lat = alert.latitude;
+  const lon = alert.longitude;
 
+  return (
+    lat >= 24.3 &&
+    lat <= 25.6 &&
+    lon >= 66.3 &&
+    lon <= 68.3
+  );
+}
   const geoJson = useMemo(() => {
     return {
       type: "FeatureCollection",
-      features: alerts.map((alert) => ({
+      features: alerts.filter(isKarachiRegion).map((alert) => ({
         type: "Feature",
         geometry: {
           type: "Point",
@@ -63,8 +73,8 @@ export default function AlertMap({ alerts }: Props) {
     const map = new maplibregl.Map({
       container: mapContainerRef.current,
       style: "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json",
-      center: [69.3451, 30.3753],
-      zoom: 4.7,
+      center: [67.0011, 24.8607],
+      zoom: 10.2,
       attributionControl: false,
     });
 
@@ -262,7 +272,7 @@ export default function AlertMap({ alerts }: Props) {
     <div className="relative h-full w-full">
       <div className="absolute left-4 top-4 z-10 rounded-xl border border-gray-700 bg-black/70 px-4 py-3 backdrop-blur">
         <p className="text-xs text-gray-400">Map Mode</p>
-        <p className="text-sm font-semibold">Cluster + Heatmap + Click Details</p>
+        <p className="text-sm font-semibold">Karachi Hotspot Cluster Map</p>
       </div>
 
       <div ref={mapContainerRef} className="h-full w-full" />
