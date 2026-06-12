@@ -51,9 +51,6 @@ export default function ExcelUploader({ onDataLoaded }: Props) {
   }, []);
 
   return (
-    <div className="rounded-xl border border-slate-700 bg-slate-900/70 px-4 py-2">
-      <p className="text-xs text-slate-400">Data Source</p>
-      <p className="text-sm font-semibold text-green-400">{status}</p>
-    </div>
+    null
   );
 }

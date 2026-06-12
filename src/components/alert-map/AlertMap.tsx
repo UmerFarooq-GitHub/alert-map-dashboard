@@ -1,32 +1,26 @@
 "use client";
 
 import "maplibre-gl/dist/maplibre-gl.css";
-import { isKarachiRegion } from "@/utils/alertFilters";
 
-import maplibregl, {
-  GeoJSONSource,
-  Map,
-  MapLayerMouseEvent,
-  Popup,
-} from "maplibre-gl";
-
-import type { FeatureCollection, Point } from "geojson";
+import maplibregl, { Map, MapLayerMouseEvent, Popup } from "maplibre-gl";
 import { useEffect, useMemo, useRef } from "react";
-import { AlertRecord } from "../../types/alert";
+import type { FeatureCollection, Point } from "geojson";
+import { AlertRecord } from "@/types/alert";
+import { isKarachiRegion } from "@/utils/alertFilters";
+import { normalizeAlertType } from "@/utils/hotspotAnalysis";
 
 type Props = {
   alerts: AlertRecord[];
 };
 
-function getAlertColor(alertName: string) {
-  const name = alertName.toLowerCase();
+function getAlertColor(alertType: string | null) {
+  if (alertType === "Unusual Halt") return "#f97316";
+  if (alertType === "Route Deviation") return "#ef4444";
+  if (alertType === "Door Alerts") return "#eab308";
+  if (alertType === "UnSync") return "#22c55e";
+  if (alertType === "Deattached") return "#8b5cf6";
 
-  if (name.includes("route")) return "#ef4444";
-  if (name.includes("stoppage")) return "#f97316";
-  if (name.includes("door")) return "#eab308";
-  if (name.includes("detached")) return "#a855f7";
-
-  return "#22c55e";
+  return "#64748b";
 }
 
 export default function AlertMap({ alerts }: Props) {
@@ -34,10 +28,20 @@ export default function AlertMap({ alerts }: Props) {
   const mapRef = useRef<Map | null>(null);
   const popupRef = useRef<Popup | null>(null);
 
+  const filteredAlerts = useMemo(() => {
+    return alerts
+      .filter(isKarachiRegion)
+      .map((alert) => ({
+        ...alert,
+        normalizedType: normalizeAlertType(alert.alertName),
+      }))
+      .filter((alert) => alert.normalizedType !== null);
+  }, [alerts]);
+
   const geoJson = useMemo(() => {
     return {
       type: "FeatureCollection",
-      features: alerts.filter(isKarachiRegion).map((alert) => ({
+      features: filteredAlerts.map((alert) => ({
         type: "Feature",
         geometry: {
           type: "Point",
@@ -45,18 +49,17 @@ export default function AlertMap({ alerts }: Props) {
         },
         properties: {
           id: alert.id,
+          alertType: alert.normalizedType,
+          originalAlertName: alert.alertName,
           timePkt: alert.timePkt,
-          tripId: alert.tripId,
-          alertId: alert.alertId,
-          alertName: alert.alertName,
-          vehicleRegistrationNumber: alert.vehicleRegistrationNumber,
+          vehicle: alert.vehicleRegistrationNumber,
           containerId: alert.containerId,
           alertStatus: alert.alertStatus,
-          color: getAlertColor(alert.alertName),
+          color: getAlertColor(alert.normalizedType),
         },
       })),
     } as FeatureCollection<Point>;
-  }, [alerts]);
+  }, [filteredAlerts]);
 
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return;
@@ -64,8 +67,8 @@ export default function AlertMap({ alerts }: Props) {
     const map = new maplibregl.Map({
       container: mapContainerRef.current,
       style: "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json",
-      center: [67.0011, 24.8607],
-      zoom: 10.2,
+      center: [67.065, 24.9],
+      zoom: 10.7,
       attributionControl: false,
     });
 
@@ -74,12 +77,19 @@ export default function AlertMap({ alerts }: Props) {
 
     map.on("load", () => {
       map.addSource("alerts", {
-        type: "geojson",
-        data: geoJson,
-        cluster: true,
-        clusterMaxZoom: 15,
-        clusterRadius: 35,
-      });
+  type: "geojson",
+  data: geoJson,
+  cluster: true,
+  clusterMaxZoom: 14,
+  clusterRadius: 45,
+  clusterProperties: {
+    unusualHalt: ["+", ["case", ["==", ["get", "alertType"], "Unusual Halt"], 1, 0]],
+    routeDeviation: ["+", ["case", ["==", ["get", "alertType"], "Route Deviation"], 1, 0]],
+    doorAlerts: ["+", ["case", ["==", ["get", "alertType"], "Door Alerts"], 1, 0]],
+    unsync: ["+", ["case", ["==", ["get", "alertType"], "UnSync"], 1, 0]],
+    deattached: ["+", ["case", ["==", ["get", "alertType"], "Deattached"], 1, 0]],
+  },
+});
 
       map.addLayer({
         id: "clusters",
@@ -88,16 +98,38 @@ export default function AlertMap({ alerts }: Props) {
         filter: ["has", "point_count"],
         paint: {
           "circle-color": [
-            "step",
-            ["get", "point_count"],
-            "#22c55e",
-            100,
-            "#eab308",
-            500,
-            "#f97316",
-            1000,
-            "#ef4444",
-          ],
+  "case",
+
+  [
+    ">=",
+    ["get", "routeDeviation"],
+    ["max", ["get", "unusualHalt"], ["get", "doorAlerts"], ["get", "unsync"], ["get", "deattached"]],
+  ],
+  "#ef4444",
+
+  [
+    ">=",
+    ["get", "unusualHalt"],
+    ["max", ["get", "routeDeviation"], ["get", "doorAlerts"], ["get", "unsync"], ["get", "deattached"]],
+  ],
+  "#f97316",
+
+  [
+    ">=",
+    ["get", "doorAlerts"],
+    ["max", ["get", "routeDeviation"], ["get", "unusualHalt"], ["get", "unsync"], ["get", "deattached"]],
+  ],
+  "#eab308",
+
+  [
+    ">=",
+    ["get", "unsync"],
+    ["max", ["get", "routeDeviation"], ["get", "unusualHalt"], ["get", "doorAlerts"], ["get", "deattached"]],
+  ],
+  "#22c55e",
+
+  "#8b5cf6",
+],
           "circle-radius": [
             "step",
             ["get", "point_count"],
@@ -105,9 +137,9 @@ export default function AlertMap({ alerts }: Props) {
             100,
             25,
             500,
-            32,
+            35,
             1000,
-            42,
+            45,
           ],
           "circle-opacity": 0.88,
           "circle-stroke-width": 2,
@@ -122,8 +154,8 @@ export default function AlertMap({ alerts }: Props) {
         filter: ["has", "point_count"],
         layout: {
           "text-field": ["get", "point_count_abbreviated"],
-          "text-font": ["Open Sans Bold"],
           "text-size": 13,
+          "text-font": ["Open Sans Bold"],
         },
         paint: {
           "text-color": "#ffffff",
@@ -131,105 +163,80 @@ export default function AlertMap({ alerts }: Props) {
       });
 
       map.addLayer({
-        id: "unclustered-point",
+        id: "alert-points",
         type: "circle",
         source: "alerts",
         filter: ["!", ["has", "point_count"]],
         paint: {
-          "circle-color": ["get", "color"],
+          "circle-color": [
+  "match",
+  ["get", "alertType"],
+  "Unusual Halt",
+  "#f97316",
+  "Route Deviation",
+  "#ef4444",
+  "Door Alerts",
+  "#eab308",
+  "UnSync",
+  "#22c55e",
+  "Deattached",
+  "#8b5cf6",
+  "#64748b",
+],
           "circle-radius": 7,
+          "circle-opacity": 0.95,
           "circle-stroke-width": 2,
           "circle-stroke-color": "#ffffff",
-          "circle-opacity": 0.95,
         },
       });
-
-      map.addLayer({
-        id: "heatmap",
-        type: "heatmap",
-        source: "alerts",
-        maxzoom: 12,
-        paint: {
-          "heatmap-weight": 1,
-          "heatmap-intensity": ["interpolate", ["linear"], ["zoom"], 0, 1, 12, 3],
-          "heatmap-radius": ["interpolate", ["linear"], ["zoom"], 0, 8, 12, 28],
-          "heatmap-opacity": ["interpolate", ["linear"], ["zoom"], 5, 0.7, 12, 0],
-        },
-      });
-
-      map.moveLayer("heatmap", "clusters");
     });
 
     map.on("click", "clusters", async (e: MapLayerMouseEvent) => {
-  const features = map.queryRenderedFeatures(e.point, {
-    layers: ["clusters"],
-  });
+      const features = map.queryRenderedFeatures(e.point, {
+        layers: ["clusters"],
+      });
 
-  const feature = features[0];
-  if (!feature) return;
+      const feature = features[0];
+      if (!feature) return;
 
-  const clusterId = feature.properties?.cluster_id;
-  const pointCount = feature.properties?.point_count;
-  const source = map.getSource("alerts") as GeoJSONSource;
-  const geometry = feature.geometry as Point;
+      const clusterId = feature.properties?.cluster_id;
+      const source = map.getSource("alerts") as maplibregl.GeoJSONSource;
+      const geometry = feature.geometry as Point;
 
-  if (!source || clusterId === undefined) return;
+      if (!source || clusterId === undefined) return;
 
-  const zoom = await source.getClusterExpansionZoom(clusterId);
+      const zoom = await source.getClusterExpansionZoom(clusterId);
 
-  if (zoom <= map.getZoom() + 0.5) {
-    new maplibregl.Popup({
-      closeButton: true,
-      closeOnClick: true,
-      maxWidth: "300px",
-    })
-      .setLngLat(geometry.coordinates as [number, number])
-      .setHTML(`
-        <div style="background:#111827;color:white;padding:12px;border-radius:10px;font-family:Arial">
-          <b>${pointCount} alerts at this location</b><br/>
-          <span style="font-size:12px;color:#cbd5e1">
-            Multiple records share the same or nearby GPS coordinates.
-          </span>
-        </div>
-      `)
-      .addTo(map);
+      map.easeTo({
+        center: geometry.coordinates as [number, number],
+        zoom,
+      });
+    });
 
-    return;
-  }
-
-  map.easeTo({
-    center: geometry.coordinates as [number, number],
-    zoom,
-  });
-});
-
-    map.on("click", "unclustered-point", (e: MapLayerMouseEvent) => {
+    map.on("click", "alert-points", (e: MapLayerMouseEvent) => {
       const feature = e.features?.[0];
       if (!feature || feature.geometry.type !== "Point") return;
 
       const props = feature.properties as any;
       const coordinates = feature.geometry.coordinates as [number, number];
 
-      if (popupRef.current) {
-        popupRef.current.remove();
-      }
+      if (popupRef.current) popupRef.current.remove();
 
       popupRef.current = new maplibregl.Popup({
         closeButton: true,
         closeOnClick: true,
-        maxWidth: "360px",
+        maxWidth: "340px",
       })
         .setLngLat(coordinates)
         .setHTML(`
-          <div style="background:#111827;color:#fff;padding:12px;border-radius:10px;font-family:Arial">
-            <div style="font-size:14px;font-weight:700;margin-bottom:8px;color:#93c5fd">
-              ${props.alertName || "Alert Detail"}
+          <div style="background:#111827;color:white;padding:14px;border-radius:12px;font-family:Arial">
+            <div style="font-size:15px;font-weight:800;margin-bottom:8px;color:${props.color}">
+              ${props.alertType}
             </div>
-            <div style="font-size:12px;line-height:1.7">
-              <b>Time PKT:</b> ${props.timePkt || "-"}<br/>
-              <b>Trip ID:</b> ${props.tripId || "-"}<br/>
-              <b>Alert ID:</b> ${props.alertId || "-"}<br/>
-              <b>Vehicle:</b> ${props.vehicleRegistrationNumber || "-"}<br/>
+            <div style="font-size:12px;line-height:1.8;color:#e5e7eb">
+              <b>Original Alert:</b> ${props.originalAlertName || "-"}<br/>
+              <b>Time:</b> ${props.timePkt || "-"}<br/>
+              <b>Vehicle:</b> ${props.vehicle || "-"}<br/>
               <b>Container:</b> ${props.containerId || "-"}<br/>
               <b>Status:</b> ${props.alertStatus || "-"}<br/>
               <b>Latitude:</b> ${coordinates[1]}<br/>
@@ -248,11 +255,11 @@ export default function AlertMap({ alerts }: Props) {
       map.getCanvas().style.cursor = "";
     });
 
-    map.on("mouseenter", "unclustered-point", () => {
+    map.on("mouseenter", "alert-points", () => {
       map.getCanvas().style.cursor = "pointer";
     });
 
-    map.on("mouseleave", "unclustered-point", () => {
+    map.on("mouseleave", "alert-points", () => {
       map.getCanvas().style.cursor = "";
     });
 
@@ -268,28 +275,12 @@ export default function AlertMap({ alerts }: Props) {
     const map = mapRef.current;
     if (!map) return;
 
-    const updateSource = () => {
-      const source = map.getSource("alerts") as GeoJSONSource | undefined;
-      if (source) {
-        source.setData(geoJson);
-      }
-    };
+    const source = map.getSource("alerts") as maplibregl.GeoJSONSource;
 
-    if (map.isStyleLoaded()) {
-      updateSource();
-    } else {
-      map.once("load", updateSource);
+    if (source) {
+      source.setData(geoJson);
     }
   }, [geoJson]);
 
-  return (
-    <div className="relative h-full w-full">
-      <div className="absolute left-4 top-4 z-10 rounded-xl border border-gray-700 bg-black/70 px-4 py-3 backdrop-blur">
-        <p className="text-xs text-gray-400">Map Mode</p>
-        <p className="text-sm font-semibold">Cluster + Heatmap + Click Details</p>
-      </div>
-
-      <div ref={mapContainerRef} className="h-full w-full" />
-    </div>
-  );
+  return <div ref={mapContainerRef} className="h-full w-full" />;
 }
