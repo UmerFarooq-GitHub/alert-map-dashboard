@@ -28,40 +28,45 @@ export const TARGET_ALERT_TYPES: HotspotAlertType[] = [
 ];
 
 export function normalizeAlertType(alertName: string): HotspotAlertType | null {
-  const name = alertName.toLowerCase();
+  const name = alertName.toLowerCase().trim();
 
   if (
-    name.includes("unusual_halt") ||
     name.includes("unusual halt") ||
+    name.includes("unusual_halt") ||
+    name.includes("unusual stoppage") ||
+    name.includes("stoppage") ||
     name.includes("halt")
   ) {
     return "Unusual Halt";
   }
 
   if (
-    name.includes("route_deviation") ||
     name.includes("route deviation") ||
+    name.includes("route_deviation") ||
     name.includes("route")
   ) {
     return "Route Deviation";
   }
 
-  if (name.includes("door")) {
+  if (
+    name.includes("door")
+  ) {
     return "Door Alerts";
   }
 
   if (
     name.includes("unsync") ||
-    name.includes("un_sync") ||
-    name.includes("un sync")
+    name.includes("un sync") ||
+    name.includes("un_sync")
   ) {
     return "UnSync";
   }
 
   if (
+    name.includes("detached") ||
+    name.includes("deattached") ||
     name.includes("detach") ||
-    name.includes("deattach") ||
-    name.includes("deattached")
+    name.includes("device detached")
   ) {
     return "Deattached";
   }

@@ -51,7 +51,6 @@ export default function Home() {
     Data Loaded Successfully
   </p>
 </div>
-
       <section className="h-[calc(100vh-135px)] rounded-2xl border border-gray-800 bg-[#111827] overflow-hidden">
         <AlertMap alerts={alerts} />
       </section>

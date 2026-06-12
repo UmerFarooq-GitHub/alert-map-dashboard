@@ -27,6 +27,7 @@ export default function AlertMap({ alerts }: Props) {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<Map | null>(null);
   const popupRef = useRef<Popup | null>(null);
+  const isMapLoadedRef = useRef(false);
 
   const filteredAlerts = useMemo(() => {
     return alerts
@@ -76,6 +77,7 @@ export default function AlertMap({ alerts }: Props) {
     map.addControl(new maplibregl.FullscreenControl(), "top-right");
 
     map.on("load", () => {
+      isMapLoadedRef.current = true;
       map.addSource("alerts", {
   type: "geojson",
   data: geoJson,
@@ -272,15 +274,33 @@ export default function AlertMap({ alerts }: Props) {
   }, []);
 
   useEffect(() => {
-    const map = mapRef.current;
-    if (!map) return;
+  const map = mapRef.current;
+  if (!map) return;
 
-    const source = map.getSource("alerts") as maplibregl.GeoJSONSource;
+  const updateMapData = () => {
+    const source = map.getSource("alerts") as maplibregl.GeoJSONSource | undefined;
 
     if (source) {
       source.setData(geoJson);
     }
-  }, [geoJson]);
+  };
 
-  return <div ref={mapContainerRef} className="h-full w-full" />;
+  if (isMapLoadedRef.current && map.getSource("alerts")) {
+    updateMapData();
+  } else {
+    map.once("load", updateMapData);
+  }
+}, [geoJson]);
+
+  return (
+  <div className="relative h-full w-full">
+    {filteredAlerts.length === 0 && (
+      <div className="absolute left-4 top-4 z-10 rounded-xl bg-black/80 px-4 py-3 text-sm text-yellow-300">
+        Loading Karachi alert points...
+      </div>
+    )}
+
+    <div ref={mapContainerRef} className="h-full w-full" />
+  </div>
+);
 }
