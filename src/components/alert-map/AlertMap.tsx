@@ -77,8 +77,8 @@ export default function AlertMap({ alerts }: Props) {
         type: "geojson",
         data: geoJson,
         cluster: true,
-        clusterMaxZoom: 14,
-        clusterRadius: 55,
+        clusterMaxZoom: 15,
+        clusterRadius: 35,
       });
 
       map.addLayer({
@@ -161,24 +161,47 @@ export default function AlertMap({ alerts }: Props) {
     });
 
     map.on("click", "clusters", async (e: MapLayerMouseEvent) => {
-      const features = map.queryRenderedFeatures(e.point, {
-        layers: ["clusters"],
-      });
+  const features = map.queryRenderedFeatures(e.point, {
+    layers: ["clusters"],
+  });
 
-      const clusterId = features[0]?.properties?.cluster_id;
-      const source = map.getSource("alerts") as GeoJSONSource;
+  const feature = features[0];
+  if (!feature) return;
 
-      if (clusterId === undefined || !source) return;
+  const clusterId = feature.properties?.cluster_id;
+  const pointCount = feature.properties?.point_count;
+  const source = map.getSource("alerts") as GeoJSONSource;
+  const geometry = feature.geometry as Point;
 
-      const zoom = await source.getClusterExpansionZoom(clusterId);
+  if (!source || clusterId === undefined) return;
 
-      const geometry = features[0].geometry as Point;
+  const zoom = await source.getClusterExpansionZoom(clusterId);
 
-      map.easeTo({
-        center: geometry.coordinates as [number, number],
-        zoom,
-      });
-    });
+  if (zoom <= map.getZoom() + 0.5) {
+    new maplibregl.Popup({
+      closeButton: true,
+      closeOnClick: true,
+      maxWidth: "300px",
+    })
+      .setLngLat(geometry.coordinates as [number, number])
+      .setHTML(`
+        <div style="background:#111827;color:white;padding:12px;border-radius:10px;font-family:Arial">
+          <b>${pointCount} alerts at this location</b><br/>
+          <span style="font-size:12px;color:#cbd5e1">
+            Multiple records share the same or nearby GPS coordinates.
+          </span>
+        </div>
+      `)
+      .addTo(map);
+
+    return;
+  }
+
+  map.easeTo({
+    center: geometry.coordinates as [number, number],
+    zoom,
+  });
+});
 
     map.on("click", "unclustered-point", (e: MapLayerMouseEvent) => {
       const feature = e.features?.[0];

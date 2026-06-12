@@ -32,42 +32,32 @@ const cards = [
   {
     label: "Karachi Region Alerts",
     value: total,
-    border: "border-emerald-500/60",
-    bg: "bg-emerald-950/30",
-    glow: "shadow-emerald-500/20",
-    text: "text-emerald-400",
+    bg: "bg-[#10b981]",
+    text: "text-white",
   },
   {
     label: "Route Deviation",
     value: routeDeviation,
-    border: "border-red-500/60",
-    bg: "bg-red-950/30",
-    glow: "shadow-red-500/20",
-    text: "text-red-400",
+    bg: "bg-[#ef4444]",
+    text: "text-white",
   },
   {
     label: "Unusual Stoppage",
     value: stoppage,
-    border: "border-orange-500/60",
-    bg: "bg-orange-950/30",
-    glow: "shadow-orange-500/20",
-    text: "text-orange-400",
+    bg: "bg-[#f59e0b]",
+    text: "text-white",
   },
   {
     label: "Device Detached",
     value: detached,
-    border: "border-purple-500/60",
-    bg: "bg-purple-950/30",
-    glow: "shadow-purple-500/20",
-    text: "text-purple-400",
+    bg: "bg-[#8b5cf6]",
+    text: "text-white",
   },
   {
     label: "Door Alerts",
     value: door,
-    border: "border-yellow-500/60",
-    bg: "bg-yellow-950/30",
-    glow: "shadow-yellow-500/20",
-    text: "text-yellow-400",
+    bg: "bg-[#eab308]",
+    text: "text-white",
   },
 ];
 
@@ -75,17 +65,17 @@ const cards = [
     <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mt-4">
       {cards.map((card) => (
         <div
-          key={card.label}
-          className={`rounded-2xl border ${card.border} ${card.bg} p-4 shadow-lg ${card.glow}`}
-        >
-          <p className="text-xs uppercase tracking-wide text-gray-400">
-            {card.label}
-          </p>
+  key={card.label}
+  className={`rounded-[28px] ${card.bg} p-6 shadow-xl`}
+>
+  <p className="text-xs uppercase tracking-wider text-black/70 font-semibold">
+    {card.label}
+  </p>
 
-          <p className={`mt-2 text-2xl font-semibold ${card.text}`}>
-            {card.value.toLocaleString()}
-          </p>
-        </div>
+  <p className="mt-3 text-4xl font-extrabold text-white">
+    {card.value.toLocaleString()}
+  </p>
+</div>
       ))}
     </div>
   );
