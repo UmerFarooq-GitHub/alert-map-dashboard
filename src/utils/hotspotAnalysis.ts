@@ -55,6 +55,8 @@ export function normalizeAlertType(alertName: string): HotspotAlertType | null {
   }
 
   if (
+    name.includes("device out of sync") ||
+    name.includes("out of sync") ||
     name.includes("unsync") ||
     name.includes("un sync") ||
     name.includes("un_sync")
