@@ -11,6 +11,8 @@ import { normalizeAlertType } from "@/utils/hotspotAnalysis";
 
 type Props = {
   alerts: AlertRecord[];
+  selectedAlerts: string[];
+
 };
 
 function getAlertColor(alertType: string | null) {
@@ -23,21 +25,24 @@ function getAlertColor(alertType: string | null) {
   return "#64748b";
 }
 
-export default function AlertMap({ alerts }: Props) {
+export default function AlertMap({ alerts, selectedAlerts }: Props) {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<Map | null>(null);
   const popupRef = useRef<Popup | null>(null);
   const isMapLoadedRef = useRef(false);
 
   const filteredAlerts = useMemo(() => {
-    return alerts
-      .filter(isKarachiRegion)
-      .map((alert) => ({
-        ...alert,
-        normalizedType: normalizeAlertType(alert.alertName),
-      }))
-      .filter((alert) => alert.normalizedType !== null);
-  }, [alerts]);
+  return alerts
+    .filter(isKarachiRegion)
+    .map((alert) => ({
+      ...alert,
+      normalizedType: normalizeAlertType(alert.alertName),
+    }))
+    .filter((alert) => alert.normalizedType !== null)
+    .filter((alert) =>
+      selectedAlerts.includes(alert.normalizedType as string)
+    );
+}, [alerts, selectedAlerts]);
 
   const geoJson = useMemo(() => {
     return {
@@ -285,12 +290,12 @@ export default function AlertMap({ alerts }: Props) {
     }
   };
 
-  if (isMapLoadedRef.current && map.getSource("alerts")) {
+  if (map.isStyleLoaded()) {
     updateMapData();
   } else {
     map.once("load", updateMapData);
   }
-}, [geoJson]);
+}, [geoJson, selectedAlerts]);
 
   return (
   <div className="relative h-full w-full">

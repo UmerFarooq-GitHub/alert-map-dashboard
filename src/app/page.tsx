@@ -5,9 +5,13 @@ import { useState } from "react";
 import { AlertRecord } from "@/types/alert";
 import ExcelUploader from "@/components/alert-map/ExcelUploader";
 import AlertMap from "@/components/alert-map/AlertMap";
+import AlertFilters from "@/components/alert-map/AlertFilters";
 
 export default function Home() {
   const [alerts, setAlerts] = useState<AlertRecord[]>([]);
+  const [selectedAlerts, setSelectedAlerts] = useState<string[]>([
+    "Unusual Halt",
+  ]);
 
   return (
     <main className="min-h-screen bg-[#080b10] text-white p-4">
@@ -28,7 +32,7 @@ export default function Home() {
 
             <div>
               <h1 className="text-2xl font-bold">
-                Karachi Alert Hotspot Map
+                Karachi Alert Analytics Map
               </h1>
               <p className="text-sm text-slate-400">
                 Focused operational view for high-alert locations
@@ -36,23 +40,26 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="hidden xl:flex items-center gap-4 text-xs font-semibold">
+          {/* <div className="hidden xl:flex items-center gap-4 text-xs font-semibold">
             <Legend color="bg-orange-500" label="Unusual Halt" />
             <Legend color="bg-red-500" label="Route Deviation" />
             <Legend color="bg-yellow-400" label="Door Alerts" />
             <Legend color="bg-green-500" label="UnSync" />
             <Legend color="bg-purple-500" label="Deattached" />
-          </div>
+          </div> */}
         </div>
       </div>
-<div className="mb-4 rounded-xl border border-slate-700 bg-[#111827] px-4 py-3">
-  <p className="text-xs text-slate-400">Data Source</p>
-  <p className="text-sm font-bold text-emerald-400">
-    Data Loaded Successfully
-  </p>
-</div>
+      <AlertFilters
+        selectedAlerts={selectedAlerts}
+        setSelectedAlerts={setSelectedAlerts}
+      />
+
       <section className="h-[calc(100vh-135px)] rounded-2xl border border-gray-800 bg-[#111827] overflow-hidden">
-        <AlertMap alerts={alerts} />
+        
+        <AlertMap
+          alerts={alerts}
+          selectedAlerts={selectedAlerts}
+        />
       </section>
     </main>
   );
